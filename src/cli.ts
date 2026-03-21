@@ -1,18 +1,26 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const { version, name } = await import("../package.json", {
-  with: { type: "json" },
-}).then((m) => m.default);
+declare const __SKILLWATCH_PACKAGE_NAME__: string | undefined;
+declare const __SKILLWATCH_PACKAGE_VERSION__: string | undefined;
+
+const PACKAGE_NAME =
+  typeof __SKILLWATCH_PACKAGE_NAME__ === "string"
+    ? __SKILLWATCH_PACKAGE_NAME__
+    : (process.env.npm_package_name ?? "skillwatch");
+const PACKAGE_VERSION =
+  typeof __SKILLWATCH_PACKAGE_VERSION__ === "string"
+    ? __SKILLWATCH_PACKAGE_VERSION__
+    : (process.env.npm_package_version ?? "0.0.0");
 
 const ENTRYPOINT_PATH = fileURLToPath(import.meta.url);
 const PACKAGE_DIR = dirname(ENTRYPOINT_PATH);
 const CHECKER_SOURCE_PATH = join(PACKAGE_DIR, "checker.js");
-const COMMAND_NAME = name.split("/").at(-1) ?? "skillwatch";
+const COMMAND_NAME = PACKAGE_NAME.split("/").at(-1) ?? "skillwatch";
 const APP_DIR_NAME = "skillwatch";
 const LEGACY_APP_DIR_NAME = "skills-update-notifier";
 
@@ -43,6 +51,12 @@ export const parseInteger = (
 interface InstallOptions {
   hour: number;
   minute: number;
+}
+
+interface PlistPaths {
+  checkerTargetPath: string;
+  stdoutPath: string;
+  stderrPath: string;
 }
 
 const LABEL = "com.mblode.skillwatch";
@@ -92,24 +106,46 @@ const getUid = (): number => {
   return (process.getuid as () => number)();
 };
 
-const writePlist = async (
-  templatePath: string,
+export const renderPlist = (
   options: InstallOptions,
-  paths: {
-    checkerTargetPath: string;
-    stdoutPath: string;
-    stderrPath: string;
-  }
+  paths: PlistPaths,
+  nodePath = process.execPath
+): string => `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>${LABEL}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>${nodePath}</string>
+      <string>${paths.checkerTargetPath}</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key>
+      <integer>${options.hour}</integer>
+      <key>Minute</key>
+      <integer>${options.minute}</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>${paths.stdoutPath}</string>
+
+    <key>StandardErrorPath</key>
+    <string>${paths.stderrPath}</string>
+  </dict>
+</plist>
+`;
+
+const writePlist = async (
+  options: InstallOptions,
+  paths: PlistPaths
 ): Promise<void> => {
   const plistTargetPath = getPlistTargetPath();
-  const template = await readFile(templatePath, "utf8");
-  const content = template
-    .replaceAll("__NODE_BIN__", process.execPath)
-    .replaceAll("__SCRIPT_PATH__", paths.checkerTargetPath)
-    .replaceAll("__HOUR__", String(options.hour))
-    .replaceAll("__MINUTE__", String(options.minute))
-    .replaceAll("__STDOUT_PATH__", paths.stdoutPath)
-    .replaceAll("__STDERR_PATH__", paths.stderrPath);
+  const content = renderPlist(options, paths);
 
   await mkdir(dirname(plistTargetPath), { recursive: true });
   await writeFile(plistTargetPath, content, "utf8");
@@ -146,7 +182,7 @@ const bootstrapAgent = (): void => {
 const printUsage = (): void => {
   console.log(
     `
-${name} ${version}
+${PACKAGE_NAME} ${PACKAGE_VERSION}
 
 Usage:
   ${COMMAND_NAME} install [--hour 9] [--minute 0]
@@ -213,15 +249,11 @@ const installCommand = async (args: string[]): Promise<void> => {
   const appDir = getAppDir();
   const logDir = getLogDir();
   const checkerTargetPath = join(appDir, "checker.js");
-  const plistTemplatePath = join(
-    PACKAGE_DIR,
-    "com.mblode.skillwatch.plist.template"
-  );
 
   await mkdir(appDir, { recursive: true });
   await mkdir(logDir, { recursive: true });
   await copyFile(CHECKER_SOURCE_PATH, checkerTargetPath);
-  await writePlist(plistTemplatePath, options, {
+  await writePlist(options, {
     checkerTargetPath,
     stderrPath: join(logDir, "stderr.log"),
     stdoutPath: join(logDir, "stdout.log"),
@@ -292,7 +324,7 @@ const main = async (): Promise<void> => {
   }
 
   if (command === "--version" || command === "-v" || command === "version") {
-    console.log(version);
+    console.log(PACKAGE_VERSION);
     return;
   }
 
