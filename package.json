@@ -1,0 +1,60 @@
+{
+  "name": "skillwatch",
+  "version": "0.1.0",
+  "description": "Daily macOS notifications when installed GitHub-backed skills have updates.",
+  "keywords": [
+    "agent-skills",
+    "launchd",
+    "macos",
+    "notification",
+    "skills"
+  ],
+  "homepage": "https://github.com/mblode/update-skills#readme",
+  "bugs": {
+    "url": "https://github.com/mblode/update-skills/issues"
+  },
+  "license": "MIT",
+  "author": "Matt Blode",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mblode/update-skills.git"
+  },
+  "bin": "./dist/cli.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown && cp com.mblode.skillwatch.plist.template dist/",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "test": "vitest run",
+    "smoke": "SKILLS_CHECK_LOCK_PATH=/tmp/skillwatch-missing-lock.json SKILLS_CHECK_STATE_PATH=/tmp/skillwatch-state.json node dist/checker.js && node dist/cli.js --help && node dist/cli.js --version",
+    "validate": "npm run build && npm run typecheck && npm run check && npm run test && npm run smoke",
+    "pack:dry-run": "npm pack --dry-run",
+    "changeset": "changeset",
+    "release": "npm run build && changeset publish",
+    "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && lefthook install || true"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.0",
+    "@types/node": "^22.15.0",
+    "lefthook": "^2.1.4",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
+    "tsdown": "^0.12.0",
+    "typescript": "^5.8.0",
+    "ultracite": "^7.3.2",
+    "vitest": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

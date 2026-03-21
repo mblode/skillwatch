@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    lint-and-format:
+      glob: "*.{ts,js,mjs,json,jsonc}"
+      run: npx ultracite check
