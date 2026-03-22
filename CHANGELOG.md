@@ -1,5 +1,11 @@
 # skillwatch
 
+## 0.1.2
+
+### Patch Changes
+
+- 728b0ac: Fix missing shebang in built CLI output
+
 ## 0.1.1
 
 ### Patch Changes
