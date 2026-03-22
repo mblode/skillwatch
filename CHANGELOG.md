@@ -1,5 +1,11 @@
 # skillwatch
 
+## 0.1.4
+
+### Patch Changes
+
+- 23930b0: Improve CLI output with @clack/prompts styled formatting and colors
+
 ## 0.1.3
 
 ### Patch Changes
