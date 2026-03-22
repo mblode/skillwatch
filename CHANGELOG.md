@@ -1,5 +1,11 @@
 # skillwatch
 
+## 0.1.8
+
+### Patch Changes
+
+- 786c74a: Auto-update skills when LaunchAgent detects changes instead of notify-only. Fix check-now to always use bundled checker. Fix spinner blocking during interactive update.
+
 ## 0.1.7
 
 ### Patch Changes
