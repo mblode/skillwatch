@@ -1,6 +1,6 @@
 {
   "name": "skillwatch",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Daily macOS notifications when installed GitHub-backed skills have updates.",
   "keywords": [
     "agent-skills",
