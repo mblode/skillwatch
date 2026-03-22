@@ -1,5 +1,11 @@
 # skillwatch
 
+## 0.1.6
+
+### Patch Changes
+
+- 32559c0: Simplified README documentation for clearer usage instructions. Added internal dev dependencies for improved CLI prompts and styling.
+
 ## 0.1.5
 
 ### Patch Changes
