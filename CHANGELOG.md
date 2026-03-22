@@ -1,5 +1,11 @@
 # skillwatch
 
+## 0.1.5
+
+### Patch Changes
+
+- 0cd5101: Add interactive prompt to update skills when updates are detected
+
 ## 0.1.4
 
 ### Patch Changes
