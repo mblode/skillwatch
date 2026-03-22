@@ -388,6 +388,43 @@ const findUpdates = async (): Promise<CheckResult> => {
   return { errors, trackedSkills, updates };
 };
 
+const promptAndUpdate = async (
+  signature: string,
+  grouped: GroupedUpdate[]
+): Promise<void> => {
+  const shouldUpdate = await p.confirm({
+    message: "Update skills now?",
+  });
+
+  if (p.isCancel(shouldUpdate)) {
+    p.cancel("Cancelled");
+    await writeState(signature, grouped);
+    process.exitCode = 0;
+    return;
+  }
+
+  if (shouldUpdate) {
+    const updateSpinner = p.spinner();
+    updateSpinner.start("Updating skills...");
+
+    try {
+      execFileSync("npx", ["skills", "update"], { stdio: "pipe" });
+      updateSpinner.stop("Skills updated successfully");
+    } catch {
+      updateSpinner.stop("Update failed");
+      p.log.error(`Run manually: ${pc.bold("npx skills update")}`);
+    }
+
+    await writeState(null);
+    p.outro("Done");
+    return;
+  }
+
+  sendNotification("Skill updates available", buildNotificationBody(grouped));
+  await writeState(signature, grouped);
+  p.outro("Done");
+};
+
 const main = async (): Promise<void> => {
   const tty = p.isTTY(process.stdout);
 
@@ -449,33 +486,32 @@ const main = async (): Promise<void> => {
     );
   }
 
+  const signature = buildSignature(grouped);
+
+  if (tty) {
+    await promptAndUpdate(signature, grouped);
+    return;
+  }
+
   const state = await readJson<{ lastNotifiedSignature?: string }>(
     STATE_PATH,
     {}
   );
-  const signature = buildSignature(grouped);
 
   if (state.lastNotifiedSignature === signature) {
-    info("Updates already notified. Skipping duplicate notification.");
+    log("Updates already notified. Skipping duplicate notification.");
     await writeState(signature, grouped);
-    if (tty) {
-      p.outro("Done");
-    }
     process.exitCode = 0;
     return;
   }
 
-  const title = "Skill updates available";
   const body = buildNotificationBody(grouped);
 
-  sendNotification(title, body);
-  success(`Notification sent: ${body}`);
-  info(`To update, run: ${pc.bold("npx skills update")}`);
+  sendNotification("Skill updates available", body);
+  log(`Notification sent: ${body}`);
+  log("To update installed skills, run: npx skills update");
 
   await writeState(signature, grouped);
-  if (tty) {
-    p.outro("Done");
-  }
 };
 
 const isExecutedDirectly = (): boolean => {
