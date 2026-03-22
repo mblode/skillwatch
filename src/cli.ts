@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -349,7 +349,10 @@ const main = async (): Promise<void> => {
 const isExecutedDirectly = (): boolean => {
   const [, entryArg] = process.argv;
 
-  return entryArg !== undefined && resolve(entryArg) === ENTRYPOINT_PATH;
+  return (
+    entryArg !== undefined &&
+    realpathSync(resolve(entryArg)) === ENTRYPOINT_PATH
+  );
 };
 
 if (isExecutedDirectly()) {
