@@ -9,15 +9,15 @@
     "notification",
     "skills"
   ],
-  "homepage": "https://github.com/mblode/update-skills#readme",
+  "homepage": "https://github.com/mblode/skillwatch#readme",
   "bugs": {
-    "url": "https://github.com/mblode/update-skills/issues"
+    "url": "https://github.com/mblode/skillwatch/issues"
   },
   "license": "MIT",
   "author": "Matt Blode",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mblode/update-skills.git"
+    "url": "git+https://github.com/mblode/skillwatch.git"
   },
   "bin": {
     "skillwatch": "./dist/cli.js"
