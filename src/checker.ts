@@ -6,6 +6,9 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import * as p from "@clack/prompts";
+import pc from "picocolors";
+
 // --- Types ---
 
 interface LockFileEntry {
@@ -69,8 +72,7 @@ interface GitHubRepoResponse {
 // --- Utilities ---
 
 const log = (message: string): void => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`);
+  console.log(message);
 };
 
 const readJson = async <T>(path: string, fallback: T): Promise<T> => {
@@ -387,35 +389,64 @@ const findUpdates = async (): Promise<CheckResult> => {
 };
 
 const main = async (): Promise<void> => {
-  log(`Using lock file: ${LOCK_PATH}`);
-  log(`Using state file: ${STATE_PATH}`);
+  const tty = p.isTTY(process.stdout);
+
+  if (tty) {
+    p.intro(pc.bold("skillwatch"));
+  }
+
+  const info = tty ? (m: string) => p.log.info(m) : log;
+  const warn = tty
+    ? (m: string) => p.log.warn(m)
+    : (m: string) => log(`Warning: ${m}`);
+  const success = tty ? (m: string) => p.log.success(m) : log;
+
+  info(`Lock file: ${pc.dim(LOCK_PATH)}`);
+  info(`State file: ${pc.dim(STATE_PATH)}`);
 
   if (!existsSync(LOCK_PATH)) {
-    log("No skill lock file found. Nothing to check.");
+    warn("No skill lock file found. Nothing to check.");
+    if (tty) {
+      p.outro("Done");
+    }
     process.exitCode = 0;
     return;
   }
 
+  const s = tty ? p.spinner() : null;
+  s?.start("Checking for skill updates...");
+
   const { trackedSkills, updates, errors } = await findUpdates();
   const grouped: GroupedUpdate[] = groupUpdatesByRepo(updates);
 
-  log(`Tracked ${trackedSkills.length} GitHub-backed skill(s).`);
+  if (tty) {
+    s?.stop(
+      `Tracked ${pc.bold(String(trackedSkills.length))} GitHub-backed skill(s)`
+    );
+  } else {
+    log(`Tracked ${trackedSkills.length} GitHub-backed skill(s).`);
+  }
 
   if (errors.length > 0) {
     for (const error of errors) {
-      log(`Warning: ${error.repoId}/${error.skillName} - ${error.reason}`);
+      warn(`${error.repoId}/${error.skillName} - ${error.reason}`);
     }
   }
 
   if (grouped.length === 0) {
-    log("No updates available.");
+    success("No updates available.");
     await writeState(null);
+    if (tty) {
+      p.outro("All skills are up to date");
+    }
     process.exitCode = 0;
     return;
   }
 
   for (const repo of grouped) {
-    log(`Update available: ${repo.repoId} -> ${repo.skillNames.join(", ")}`);
+    info(
+      `Update available: ${pc.bold(repo.repoId)} ${pc.dim("->")} ${repo.skillNames.join(", ")}`
+    );
   }
 
   const state = await readJson<{ lastNotifiedSignature?: string }>(
@@ -425,8 +456,11 @@ const main = async (): Promise<void> => {
   const signature = buildSignature(grouped);
 
   if (state.lastNotifiedSignature === signature) {
-    log("Updates already notified. Skipping duplicate notification.");
+    info("Updates already notified. Skipping duplicate notification.");
     await writeState(signature, grouped);
+    if (tty) {
+      p.outro("Done");
+    }
     process.exitCode = 0;
     return;
   }
@@ -435,10 +469,13 @@ const main = async (): Promise<void> => {
   const body = buildNotificationBody(grouped);
 
   sendNotification(title, body);
-  log(`Notification sent: ${body}`);
-  log("To update installed skills, run: npx skills update");
+  success(`Notification sent: ${body}`);
+  info(`To update, run: ${pc.bold("npx skills update")}`);
 
   await writeState(signature, grouped);
+  if (tty) {
+    p.outro("Done");
+  }
 };
 
 const isExecutedDirectly = (): boolean => {
@@ -451,9 +488,16 @@ if (isExecutedDirectly()) {
   try {
     await main();
   } catch (error: unknown) {
-    log(
-      `Fatal error: ${error instanceof Error ? error.stack || error.message : String(error)}`
-    );
+    const message =
+      error instanceof Error ? error.stack || error.message : String(error);
+
+    if (p.isTTY(process.stdout)) {
+      p.log.error(message);
+      p.outro("Check failed");
+    } else {
+      log(`Fatal error: ${message}`);
+    }
+
     process.exitCode = 1;
   }
 }

@@ -1,9 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
-import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import * as p from "@clack/prompts";
+import pc from "picocolors";
 
 declare const __SKILLWATCH_PACKAGE_NAME__: string | undefined;
 declare const __SKILLWATCH_PACKAGE_VERSION__: string | undefined;
@@ -27,7 +30,7 @@ const LEGACY_APP_DIR_NAME = "skills-update-notifier";
 // --- Utilities ---
 
 const fail = (message: string): never => {
-  console.error(message);
+  p.cancel(message);
   process.exit(1);
 };
 
@@ -180,26 +183,26 @@ const bootstrapAgent = (): void => {
 // --- CLI commands ---
 
 const printUsage = (): void => {
-  console.log(
-    `
-${PACKAGE_NAME} ${PACKAGE_VERSION}
-
-Usage:
-  ${COMMAND_NAME} install [--hour 9] [--minute 0]
-  ${COMMAND_NAME} uninstall
-  ${COMMAND_NAME} check-now
-  ${COMMAND_NAME} --help
-  ${COMMAND_NAME} --version
-
-Commands:
-  install      Install the daily LaunchAgent and checker script
-  uninstall    Remove the LaunchAgent, checker script, and logs
-  check-now    Run the checker immediately
-
-Options for install:
-  --hour <0-23>                    Daily check hour, default 9
-  --minute <0-59>                  Daily check minute, default 0
-`.trim()
+  p.intro(`${pc.bold(PACKAGE_NAME)} ${pc.dim(`v${PACKAGE_VERSION}`)}`);
+  p.note(
+    [
+      `${pc.bold("Usage")}`,
+      `  ${COMMAND_NAME} install [--hour 9] [--minute 0]`,
+      `  ${COMMAND_NAME} uninstall`,
+      `  ${COMMAND_NAME} check-now`,
+      `  ${COMMAND_NAME} --help`,
+      `  ${COMMAND_NAME} --version`,
+      "",
+      `${pc.bold("Commands")}`,
+      `  install      Install the daily LaunchAgent and checker script`,
+      `  uninstall    Remove the LaunchAgent, checker script, and logs`,
+      `  check-now    Run the checker immediately`,
+      "",
+      `${pc.bold("Options for install")}`,
+      `  --hour <0-23>     Daily check hour ${pc.dim("(default 9)")}`,
+      `  --minute <0-59>   Daily check minute ${pc.dim("(default 0)")}`,
+    ].join("\n"),
+    "Help"
   );
 };
 
@@ -241,6 +244,7 @@ const parseInstallOptions = (args: string[]): InstallOptions => {
 };
 
 const installCommand = async (args: string[]): Promise<void> => {
+  p.intro(`${pc.bold(COMMAND_NAME)} ${pc.dim("install")}`);
   assertMacOS();
   requireCommand("launchctl");
   requireCommand("plutil");
@@ -252,7 +256,14 @@ const installCommand = async (args: string[]): Promise<void> => {
 
   await mkdir(appDir, { recursive: true });
   await mkdir(logDir, { recursive: true });
-  await copyFile(CHECKER_SOURCE_PATH, checkerTargetPath);
+
+  const distFiles = await readdir(PACKAGE_DIR);
+
+  await Promise.all(
+    distFiles
+      .filter((f) => f.endsWith(".js"))
+      .map((f) => copyFile(join(PACKAGE_DIR, f), join(appDir, f)))
+  );
   await writePlist(options, {
     checkerTargetPath,
     stderrPath: join(logDir, "stderr.log"),
@@ -263,23 +274,21 @@ const installCommand = async (args: string[]): Promise<void> => {
   bootoutIfLoaded();
   bootstrapAgent();
 
-  console.log(
-    `
-Installed ${COMMAND_NAME}.
-
-Files:
-  agent:  ${getPlistTargetPath()}
-  script: ${checkerTargetPath}
-  logs:   ${logDir}
-
-Check now:
-  npx ${COMMAND_NAME} check-now
-  launchctl kickstart -k gui/${getUid()}/${LABEL}
-`.trim()
+  p.note(
+    [
+      `${pc.dim("agent")}   ${getPlistTargetPath()}`,
+      `${pc.dim("script")}  ${checkerTargetPath}`,
+      `${pc.dim("logs")}    ${logDir}`,
+    ].join("\n"),
+    "Installed files"
+  );
+  p.outro(
+    `Run ${pc.bold(`npx ${COMMAND_NAME} check-now`)} to check immediately`
   );
 };
 
 const uninstallCommand = async (): Promise<void> => {
+  p.intro(`${pc.bold(COMMAND_NAME)} ${pc.dim("uninstall")}`);
   assertMacOS();
   requireCommand("launchctl");
 
@@ -292,7 +301,7 @@ const uninstallCommand = async (): Promise<void> => {
   await rm(getLogDir(), { force: true, recursive: true });
   await rm(getLegacyLogDir(), { force: true, recursive: true });
 
-  console.log(`Uninstalled ${COMMAND_NAME}.`);
+  p.outro(`${COMMAND_NAME} has been uninstalled`);
 };
 
 const checkNowCommand = (): void => {
