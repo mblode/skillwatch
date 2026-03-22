@@ -49,7 +49,6 @@ const normalizeBuildOptions = (options: BuildOptions): void => {
 };
 
 const shared = {
-  banner: { js: "#!/usr/bin/env node" },
   define: {
     __SKILLWATCH_PACKAGE_NAME__: JSON.stringify(packageJson.name),
     __SKILLWATCH_PACKAGE_VERSION__: JSON.stringify(packageJson.version),
@@ -58,6 +57,10 @@ const shared = {
   hooks: {
     "build:before": ({ buildOptions }: { buildOptions: BuildOptions }) => {
       normalizeBuildOptions(buildOptions);
+      buildOptions.output = {
+        ...buildOptions.output,
+        banner: "#!/usr/bin/env node",
+      };
     },
   },
   sourcemap: false,
