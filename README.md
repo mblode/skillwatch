@@ -1,34 +1,14 @@
 # skillwatch
 
-Daily macOS notifications when your installed agent skills have updates on GitHub.
-
-## Install
+Notifies you when installed agent skills have updates.
 
 ```bash
 npx skillwatch install
-```
-
-Runs daily at 09:00. Customise with `--hour 14 --minute 30`.
-
-For frequent use, install globally with `npm install -g skillwatch`.
-
-## Verify
-
-```bash
 npx skillwatch check-now
 ```
 
-## Uninstall
+Checks daily at 9:00 am. Change the time with `--hour` and `--minute`.
 
-```bash
-npx skillwatch uninstall
-```
-
-## Troubleshooting
-
-- **"No skill lock file found"** — run `npx skills` first so the lock file exists.
-- **Node path changed** — rerun `npx skillwatch install` to update the LaunchAgent.
-
-## License
+Uninstall with `npx skillwatch uninstall`.
 
 [MIT](LICENSE.md)

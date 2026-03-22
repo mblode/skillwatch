@@ -25,7 +25,7 @@ Published npm package and macOS LaunchAgent installer for daily skill update not
 - Published package and CLI command are both `skillwatch`.
 - `src/checker.ts` is the runtime source of truth for GitHub lookups, hash comparison, dedupe state, and notifications. Keep install logic thin.
 - The LaunchAgent stores `process.execPath` at install time. If the Node path changes later, rerun `install`.
-- Keep the `build:before` normalization hook in `tsdown.config.ts`. `tsdown@0.12.9` passes `define` and `inject` as top-level rolldown input options, which triggers warnings unless they are moved into `transform`.
+- Keep the `build:before` normalization hook in `tsdown.config.ts`. `tsdown@0.12.9` passes `define` and `inject` as top-level rolldown input options, which triggers warnings unless they are moved into `transform`. The shebang banner must also be set via `buildOptions.output.banner` in this hook — tsdown silently ignores a top-level `banner` option.
 
 ## Conventions and Boundaries
 
