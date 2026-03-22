@@ -196,22 +196,35 @@ describe("buildNotificationBody", () => {
   });
 });
 
+const makeUpdate = (repoId: string, skillName: string, remoteHash = "abc") => ({
+  localHash: "000",
+  remoteHash,
+  repoId,
+  skillName,
+});
+
 describe("buildSignature", () => {
   it("returns deterministic hash", () => {
-    const grouped = [{ repoId: "a/b", skillNames: ["s1"] }];
-    const sig1 = buildSignature(grouped);
-    const sig2 = buildSignature(grouped);
+    const updates = [makeUpdate("a/b", "s1")];
+    const sig1 = buildSignature(updates);
+    const sig2 = buildSignature(updates);
     expect(sig1).toBe(sig2);
   });
 
   it("returns different hash for different input", () => {
-    const a = buildSignature([{ repoId: "a/b", skillNames: ["s1"] }]);
-    const b = buildSignature([{ repoId: "c/d", skillNames: ["s2"] }]);
+    const a = buildSignature([makeUpdate("a/b", "s1")]);
+    const b = buildSignature([makeUpdate("c/d", "s2")]);
+    expect(a).not.toBe(b);
+  });
+
+  it("returns different hash when remoteHash changes", () => {
+    const a = buildSignature([makeUpdate("a/b", "s1", "hash1")]);
+    const b = buildSignature([makeUpdate("a/b", "s1", "hash2")]);
     expect(a).not.toBe(b);
   });
 
   it("returns a 64-char hex string", () => {
-    const sig = buildSignature([{ repoId: "a/b", skillNames: ["s1"] }]);
+    const sig = buildSignature([makeUpdate("a/b", "s1")]);
     expect(sig).toMatch(/^[0-9a-f]{64}$/);
   });
 });

@@ -5,6 +5,7 @@
 ### Patch Changes
 
 - 32559c0: Simplified README documentation for clearer usage instructions. Added internal dev dependencies for improved CLI prompts and styling.
+- Auto-update skills when LaunchAgent detects changes instead of notify-only. Fix check-now to always use bundled checker. Fix spinner blocking during interactive update.
 
 ## 0.1.5
 

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -306,13 +306,7 @@ const uninstallCommand = async (): Promise<void> => {
 
 const checkNowCommand = (): void => {
   assertMacOS();
-  const appDir = getAppDir();
-  const installedChecker = join(appDir, "checker.js");
-  const checkerPath = existsSync(installedChecker)
-    ? installedChecker
-    : CHECKER_SOURCE_PATH;
-
-  execFileSync(process.execPath, [checkerPath], {
+  execFileSync(process.execPath, [CHECKER_SOURCE_PATH], {
     env: process.env,
     stdio: "inherit",
   });

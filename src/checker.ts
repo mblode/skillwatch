@@ -1,10 +1,11 @@
-import { execFileSync } from "node:child_process";
+import { execFile as execFileCb, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import * as p from "@clack/prompts";
 import pc from "picocolors";
@@ -274,8 +275,8 @@ const buildNotificationBody = (grouped: GroupedUpdate[]): string => {
   return preview.join(", ");
 };
 
-const buildSignature = (grouped: GroupedUpdate[]): string =>
-  createHash("sha256").update(JSON.stringify(grouped)).digest("hex");
+const buildSignature = (updates: UpdateResult[]): string =>
+  createHash("sha256").update(JSON.stringify(updates)).digest("hex");
 
 const escapeAppleScript = (value: string): string =>
   value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -408,7 +409,7 @@ const promptAndUpdate = async (
     updateSpinner.start("Updating skills...");
 
     try {
-      execFileSync("npx", ["skills", "update"], { stdio: "pipe" });
+      await promisify(execFileCb)("npx", ["skills", "update"]);
       updateSpinner.stop("Skills updated successfully");
     } catch {
       updateSpinner.stop("Update failed");
@@ -486,7 +487,7 @@ const main = async (): Promise<void> => {
     );
   }
 
-  const signature = buildSignature(grouped);
+  const signature = buildSignature(updates);
 
   if (tty) {
     await promptAndUpdate(signature, grouped);
@@ -499,7 +500,7 @@ const main = async (): Promise<void> => {
   );
 
   if (state.lastNotifiedSignature === signature) {
-    log("Updates already notified. Skipping duplicate notification.");
+    log("Already handled. Skipping.");
     await writeState(signature, grouped);
     process.exitCode = 0;
     return;
@@ -507,11 +508,17 @@ const main = async (): Promise<void> => {
 
   const body = buildNotificationBody(grouped);
 
-  sendNotification("Skill updates available", body);
-  log(`Notification sent: ${body}`);
-  log("To update installed skills, run: npx skills update");
-
-  await writeState(signature, grouped);
+  try {
+    await promisify(execFileCb)("npx", ["skills", "update"]);
+    sendNotification("Skills updated", body);
+    log(`Updated: ${body}`);
+    await writeState(null);
+  } catch {
+    sendNotification("Skill update failed", body);
+    log(`Update failed: ${body}`);
+    log("To update manually, run: npx skills update");
+    await writeState(null, grouped);
+  }
 };
 
 const isExecutedDirectly = (): boolean => {
